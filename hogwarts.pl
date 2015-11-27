@@ -33,6 +33,12 @@ teacher(sv, 'Septima Vector').
 teacher(chb, 'Charity Burbage').
 teacher(wt, 'Wilkie Twycross').
 
+%houses at hogwarts
+house(gryffindor).
+house(hufflepuff).
+house(ravenclaw).
+house(slytherin).
+
 % compulsory courses for the MSc in Magic
 compCourse(astro, 'Astronomy', as).
 compCourse(charms, 'Charms', ff).
@@ -193,20 +199,44 @@ housesOnCourse( SCN, HousesSet):-
   studentsFromHouses( CourseStudents, HousesList),
   setOfList( HousesList, HousesSet),!.
 
-courseStudents_SN( SCN, CourseStudents ):-
-  courseStudents_SID( SCN, SIDList), snFromSID( SIDList, CourseStudents).
-
 checkHouse( SN, H ):-
   student(_, SN, H).
 
+houses( Houses ):-
+  setof( House, house(House), Houses).
+
+courseStudents_SN( SCN, CourseStudents ):-
+  courseStudents_SID( SCN, SIDList), snFromSID( SIDList, CourseStudents).
+
 houseStudents( House, SCN, Students ):-
-  setof( SN, ( courseStudents_SN( SCN, CourseStudents), 
+  findall( SN, ( courseStudents_SN( SCN, CourseStudents), 
                     member( SN, CourseStudents ), 
                     checkHouse( SN, House)
              ),
              Students).
 
 studentsOnCourse( SCN, CN, StudentsByHouse ):-
-  setof( House-Students, ( housesOnCourse( SCN, HouseSet),
+  ( compCourse( SCN, CN, _ ) ; optCourse( SCN, CN, _) ),
+  findall( House-Students, ( houses( HouseSet ), 
                            member( House, HouseSet), 
                            houseStudents( House, SCN, Students) ), StudentsByHouse).
+
+
+% sharedCourse
+sharedCourse( SN1, SN2, CN):-
+  takesAllOptions( SN1, SN1Opts), 
+  member( SN1Op, SN1Opts), 
+  (student( SID2, SN2, _),
+  optCourse( SCN2, SN1Op, _),
+  enrolled_opt( SID2, SCN2) -> CN = SN1Op).
+
+%SameOptions
+
+numberOfElements( Number, Count, []):-
+  Number = Count.
+numberOfElements( Number, Count, [H|T] ):- 
+  NewCount is Count + 1, numberOfElements( Number, NewCount, T).
+
+sameOptions( SN1, SN2, Courses):-
+  setof( Course, sharedCourse( SN1, SN2, Course), Courses),
+  numberOfElements( 3, 0, Courses).
