@@ -196,38 +196,17 @@ housesOnCourse( SCN, HousesSet):-
 courseStudents_SN( SCN, CourseStudents ):-
   courseStudents_SID( SCN, SIDList), snFromSID( SIDList, CourseStudents).
 
+checkHouse( SN, H ):-
+  student(_, SN, H).
+
 houseStudents( House, SCN, Students ):-
-  setof( Student, ( studentsInHouse( House, AllStudentsInHouse), 
-                    member( Student, AllStudentsInHouse ), 
-                    student( SID, Student, _),
-                    enrolled( SID, SCN)
-                  ),
-                   Students).
+  setof( SN, ( courseStudents_SN( SCN, CourseStudents), 
+                    member( SN, CourseStudents ), 
+                    checkHouse( SN, House)
+             ),
+             Students).
 
 studentsOnCourse( SCN, CN, StudentsByHouse ):-
   setof( House-Students, ( housesOnCourse( SCN, HouseSet),
                            member( House, HouseSet), 
                            houseStudents( House, SCN, Students) ), StudentsByHouse).
-
- 
-%pairUp( [], [], [] ).
-%pairUp( [L_H|L_T], [], [Pair_H|Pair_T] ):-
-%  Pair_H = L_H-[], pairUp( L_T, [], Pair_T).
-%
-%makeGroups( SCN, CourseStudents, Empty, Fill) :-
-%  courseStudents_SID( SCN, CourseStudents),
-%  housesOnCourse( SCN, HouseSet), !,
-%  pairUp( HouseSet, [], Empty),
-%  pairUp( HouseSet, [], Fill). 
-%
-%houseSubset( HouseName, [], []).
-%houseSubset( HouseName, [], X):-
-%  X = [].
-%houseSubset( HouseName, [SNH|SNT], [SubH|SubT] ):-
-%  (student(_, SNH, House), House\=HouseName),
-%  houseSubset( HouseName, SNT, [SubH|SubT]), !;
-%  SNH = SubH, houseSubset( HouseName, SNT, SubT ), !.
-%
-%fillGroups( [SNH|SNT], [EH|ET], [FH|FT] ):-
-%  member( gryffindor-X, [EH|ET]), append[X, SNH, jk
-%  [H|T] = [a-[]], member( a-X, [H|T]), append(X, [hp], L), X = L. 
