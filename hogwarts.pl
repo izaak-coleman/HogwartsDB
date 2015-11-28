@@ -135,108 +135,139 @@ enrolled_opt(vc, arith).
 enrolled_opt(vc, app).
 
 
+
+%%% Question 3 %%%
+
 % enrolled predicate: Predicate answers relation of which student is taking
 % which course. 
 enrolled( SID, SCN ):-
-  student( SID, _, _), (compCourse( SCN, _, _); enrolled_opt( SID, SCN )).
+  student( SID, _, _),             % Check individual is student
+  ( compCourse( SCN, _, _);        % Each student takes all compulsory courses
+    enrolled_opt( SID, SCN ) ).    % Find optional courses for student
 
 
+
+%%% Question 4 %%%
+                             
 % teaches predicate: Predicate answers relation of which teacher teaches
 % which course. 
 teaches( TN, SCN):-
-  teacher( TID, TN), (compCourse( SCN, _, TID) ; optCourse( SCN, _, TID)).
+  teacher( TID, TN),               % Check individual is teacher and get ID
+  ( compCourse( SCN, _, TID);      % Get compulsory SCN ...
+    optCourse( SCN, _, TID) ).     % or optional SCN that teacher teaches
 
+
+
+%%% Question 5 %%%
 
 % taughtBy predicate: Predicate answers relation of which student is taught
 % by which teachers. Query must be student full name, and teacher full name.
 taughtBy( SN, TN):-
-  student( SID, SN, _), enrolled( SID, SCN), teaches( TN, SCN).
+  student( SID, SN, _),            % Check individual is student and get ID
+  enrolled( SID, SCN),             % Get courses they are enrolled in
+  teaches( TN, SCN).               % Get TN of teaches that teach those courses
 
+
+
+%%% Question 6 %%%
 
 % takesOption predicate: Predicate answers relation of which student
 % takes which optional course.
 takesOption( SN, CN):-
-  student( SID, SN, _), enrolled_opt( SID, SCN ), optCourse( SCN, CN, _).
+  student( SID, SN, _),            % Check individual is student and get ID
+  enrolled_opt( SID, SCN ),        % Get SCN for an option SN takes
+  optCourse( SCN, CN, _).          % Get full course name for option
 
 
-% takesAllCourses predicate: Predicate relates all the courses a student takes
+
+%%% Question 7 %%%
+
+% takesAllOptions predicate: Predicate relates all the courses a student takes
 % to the name of the student.
 takesAllOptions( SN, OptCourses) :-
-  student( _, SN, _), setof( CN, takesOption( SN, CN), OptCourses).
+  student( _, SN, _),              % Check individual is student
+  setof( CN, takesOption( SN, CN), OptCourses). % Generate list of options
 
 
 
-% studentLoop predicate: Recurses through a list of SID and generates an 
-% list of SN for each corrsponding SID in student(SN, SID _).
+%%% Question 8 %%%
+
+% studentsInHouse predicate: Predicate generates a list of all students
+% in house H.
 inhouse(SID, H):-
   student(SID, _, H).
 
-snFromSID( [], []).
-
-snFromSID( [SID_H|SID_T], [SN_H|SN_T]):-
-  student( SID_H, SN, _), SN_H = SN, snFromSID( SID_T, SN_T).
+% snFromSID: Generates list of student names from list of student ID's
+snFromSID( [], []).                       % Base case
+snFromSID( [SID_H|SID_T], [SN_H|SN_T]):-  % Take SID list and SN list
+  student( SID_H, SN, _),                 % Find SN corresponding to SID element
+  SN_H = SN,                              % Unify SN list element to SN
+  snFromSID( SID_T, SN_T).                % Recurse to next element
 
 studentsInHouse(H, Students):-
-  setof(SID, inhouse(SID, H), SIDList), snFromSID( SIDList, Students).
+  setof(SID, inhouse(SID, H), SIDList),   % Generate SID list
+  snFromSID( SIDList, Students).          % Convert to SN list
 
-% studensOnCourse
 
-setOfList( [], [] ).
-setOfList( [H|T], [H2|T2] ):-
-  member(H, T), setOfList( T, [H2|T2]);
-  H2=H, setOfList(T, T2).
 
-studentsFromHouses( [], [] ). % get the list of houses for course
-studentsFromHouses( [CStu_H|CStu_T], [HousesH|HousesT] ):-
-  student(CStu_H, _, House), HousesH = House, 
-  studentsFromHouses( CStu_T, HousesT). 
+%%% Question 9 %%% 
 
-courseStudents_SID( SCN, CourseStudents ):-
-  bagof( Student, enrolled( Student, SCN), CourseStudents).
-
-housesOnCourse( SCN, HousesSet):-
-  courseStudents_SID( SCN, CourseStudents), 
-  studentsFromHouses( CourseStudents, HousesList),
-  setOfList( HousesList, HousesSet),!.
-
-checkHouse( SN, H ):-
-  student(_, SN, H).
-
-houses( Houses ):-
-  setof( House, house(House), Houses).
-
-courseStudents_SN( SCN, CourseStudents ):-
-  courseStudents_SID( SCN, SIDList), snFromSID( SIDList, CourseStudents).
-
-houseStudents( House, SCN, Students ):-
-  findall( SN, ( courseStudents_SN( SCN, CourseStudents), 
-                    member( SN, CourseStudents ), 
-                    checkHouse( SN, House)
-             ),
-             Students).
+% studentsOnCourse: Predicate generates a key-value lisitng of all the houses
+% (keys) and all the students (values) that are on a course
 
 studentsOnCourse( SCN, CN, StudentsByHouse ):-
-  ( compCourse( SCN, CN, _ ) ; optCourse( SCN, CN, _) ),
-  findall( House-Students, ( houses( HouseSet ), 
-                           member( House, HouseSet), 
-                           houseStudents( House, SCN, Students) ), StudentsByHouse).
+  ( compCourse( SCN, CN, _ ) ; optCourse( SCN, CN, _) ), % convert CN to SCN
+  findall( House-Students,
+         ( houses( HouseSet),           % Get list of all houses
+           member( House, HouseSet),    % Set each House as key
+           houseStudents( House, SCN, Students) ),  % get students from House on course SCN 
+           StudentsByHouse).
+
+houseStudents( House, SCN, Students ):- % Gen list of all students from a House on a course
+  findall( SN, 
+         ( courseStudents_SN( SCN, CourseStudents), % List all students on course
+           member( SN, CourseStudents),   % Get each student from course...
+           checkHouse( SN, House) ),      % and check if their house matches House
+           Students).    % list of students on SCN that are in House
 
 
-% sharedCourse
-sharedCourse( SN1, SN2, CN):-
-  takesAllOptions( SN1, SN1Opts), 
-  member( SN1Op, SN1Opts), 
-  (student( SID2, SN2, _),
-  optCourse( SCN2, SN1Op, _),
-  enrolled_opt( SID2, SCN2) -> CN = SN1Op).
+courseStudents_SID( SCN, CourseStudents ):- % ID list of students on a course
+  bagof( Student, enrolled( Student, SCN), CourseStudents).
 
-%SameOptions
+courseStudents_SN( SCN, CourseStudents ):-  %Full name list of students on a course
+  courseStudents_SID( SCN, SIDList),
+  snFromSID( SIDList, CourseStudents).
 
+checkHouse( SN, H ):-                     % Check if a student SN is in house H
+  student(_, SN, H).
+
+houses( Houses ):-                        % Generate list of houses 
+  setof( House, house(House), Houses).
+
+
+
+%%% Question 10 %%%
+
+%sharedCourse: Generates optional courses shared by two students
+sharedCourse( SN1, SN2, CN ):-
+  takesAllOptions( SN1, SN1Opts),  % Generate list of optional courses for SN1
+  member( SN1Op, SN1Opts),         % Get each optional course...
+  (student( SID2, SN2, _),         
+  optCourse( SCN1, SN1Op, _),      % get the SCN for the optional course
+  enrolled_opt( SID2, SCN1) -> CN = SN1Op). % if SN2 is enrolled in a course
+                                            % of SN1 then unify course to answer
+
+
+%%% Question 11 %%%
+
+%sameOptions: generates a list of options shared by two students if they
+% share exactly three.
 numberOfElements( Number, Count, []):-
-  Number = Count.
-numberOfElements( Number, Count, [H|T] ):- 
+  Number = Count.   % if number of elements is not equal to set number, fail
+
+numberOfElements( Number, Count, [H|T] ):-  % count elements in list
   NewCount is Count + 1, numberOfElements( Number, NewCount, T).
 
 sameOptions( SN1, SN2, Courses):-
-  setof( Course, sharedCourse( SN1, SN2, Course), Courses),
-  numberOfElements( 3, 0, Courses).
+  setof( Course, sharedCourse( SN1, SN2, Course), Courses), % get list of shared courses
+  numberOfElements( 3, 0, Courses).         % check if list length is 3
